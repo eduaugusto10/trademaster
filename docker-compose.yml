@@ -43,6 +43,8 @@ services:
       SPRING_RABBITMQ_PASSWORD: guest
       BATCH_SIZE: 5
       THREAD_POOL_SIZE: 5
+      SPRING_SECURITY_USER_NAME: eduardo
+      SPRING_SECURITY_USER_PASSWORD: trademaster
     ports:
       - "8080:8080"
     networks:
