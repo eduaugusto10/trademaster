@@ -44,6 +44,6 @@ public class Client {
         return "Client{id=" + id + ", name='" + name + "', cpf='" + cpf + "', phone='" + phone + "'}";
     }
 
-    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(cascade = CascadeType.ALL)
     private List<Card> cards;
 }

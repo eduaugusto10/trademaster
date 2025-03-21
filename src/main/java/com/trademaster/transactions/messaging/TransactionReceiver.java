@@ -52,7 +52,7 @@ public class TransactionReceiver {
 
     private List<Transaction> transactionBuffer = new ArrayList<>();
 
-    @RabbitListener(queues = "${rabbitmq.queue.transactions.news}")
+    @RabbitListener(queues = "${rabbitmq.queue.transactions.news}", containerFactory = "rabbitListenerContainerFactory")
     public void receiveMessage(Transaction transaction) {
         logger.info("Recebida transação: {}", transaction);
 

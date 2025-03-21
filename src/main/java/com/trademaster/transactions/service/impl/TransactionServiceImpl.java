@@ -12,6 +12,7 @@ import com.trademaster.transactions.service.ClientService;
 import com.trademaster.transactions.service.TransactionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.AmqpException;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -43,20 +44,9 @@ public class TransactionServiceImpl implements TransactionService {
     @Transactional
     public TransactionResponseDTO saveTransaction(TransactionCreateDTO transactionCreateDTO) {
         log.info("Criando transação: {}", transactionCreateDTO);
-        Client client = clientService.findClientEntityById(transactionCreateDTO.getClientId())
-                .orElseThrow(() -> new ResourceNotFoundException("Cliente não encontrado"));
-        boolean cardExists = client.getCards().stream()
-                .anyMatch(card -> card.getId().equals(transactionCreateDTO.getCardId()));
+        validatedClient(transactionCreateDTO);
 
-        if (!cardExists) {
-            throw new ResourceNotFoundException("Cartão não encontrado para o cliente");
-        }
-
-        Transaction transaction = transactionMapper.toEntity(transactionCreateDTO);
-        transaction.setStatus(TransactionStatus.PENDENTE);
-        var savedTransaction = transactionRepository.save(transaction);
-        sendTransactionToQueue(savedTransaction);
-        log.info("Transação criada: {}", savedTransaction);
+        Transaction savedTransaction = saveAndSend(transactionCreateDTO);
         return transactionMapper.toResponseDTO(savedTransaction);
     }
 
@@ -92,12 +82,36 @@ public class TransactionServiceImpl implements TransactionService {
 
     private void sendTransactionToQueue(Transaction transaction) {
         log.info("Enviando transação: {} para a fila", transaction);
-        rabbitTemplate.convertAndSend(
-                transactionsExchange,
-                transactionsNewsRoutingKey,
-                transaction
-        );
+        try {
+            rabbitTemplate.convertAndSend(
+                    transactionsExchange,
+                    transactionsNewsRoutingKey,
+                    transaction
+            );
+            log.info("Transação com ID {} enviada para a fila.", transaction.getId());
+        } catch (AmqpException e) {
+            log.error("Falha ao enviar transação {} para a fila: {}",
+                    transaction.getId(), e.getMessage());
+        }
+    }
 
-        log.info("Transação com ID {} enviada para a fila.", transaction.getId());
+    private void validatedClient(TransactionCreateDTO transactionCreateDTO) {
+        Client client = clientService.findClientEntityById(transactionCreateDTO.getClientId())
+                .orElseThrow(() -> new ResourceNotFoundException("Cliente não encontrado"));
+        boolean cardExists = client.getCards().stream()
+                .anyMatch(card -> card.getId().equals(transactionCreateDTO.getCardId()));
+
+        if (!cardExists) {
+            throw new ResourceNotFoundException("Cartão não encontrado para o cliente");
+        }
+    }
+
+    private Transaction saveAndSend(TransactionCreateDTO transactionCreateDTO) {
+        Transaction transaction = transactionMapper.toEntity(transactionCreateDTO);
+        transaction.setStatus(TransactionStatus.PENDENTE);
+        var savedTransaction = transactionRepository.save(transaction);
+        sendTransactionToQueue(savedTransaction);
+        log.info("Transação criada: {}", savedTransaction);
+        return savedTransaction;
     }
 }

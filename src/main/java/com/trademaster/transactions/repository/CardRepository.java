@@ -8,10 +8,13 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
+import java.util.Optional;
 
 @Repository
 public interface CardRepository extends JpaRepository<Card,Long> {
     @Modifying
     @Query("UPDATE Card c SET c.balance = c.balance - :value WHERE c.id = :id AND c.balance >= :value")
     int debitCardBalance(@Param("id") Long id, @Param("value") BigDecimal value);
+
+    Optional<Card> findByCardNumber(String cardNumber);
 }

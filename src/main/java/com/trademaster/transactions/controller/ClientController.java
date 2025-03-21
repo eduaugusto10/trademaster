@@ -3,6 +3,7 @@ package com.trademaster.transactions.controller;
 import com.trademaster.transactions.model.ClientCreateDTO;
 import com.trademaster.transactions.model.ClientResponseDTO;
 import com.trademaster.transactions.service.ClientService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -26,7 +27,7 @@ public class ClientController {
     private final ClientService clientService;
 
     @PostMapping
-    public ResponseEntity<ClientResponseDTO> createClient(@RequestBody ClientCreateDTO clientCreateDTO) {
+    public ResponseEntity<ClientResponseDTO> createClient(@Valid @RequestBody ClientCreateDTO clientCreateDTO) {
         ClientResponseDTO savedClient = clientService.saveClient(clientCreateDTO);
         return ResponseEntity.status(HttpStatus.CREATED).body(savedClient);
     }
@@ -45,7 +46,7 @@ public class ClientController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ClientResponseDTO> updateClient(@PathVariable Long id, @RequestBody ClientCreateDTO clientCreateDTO) {
+    public ResponseEntity<ClientResponseDTO> updateClient(@PathVariable Long id,@Valid @RequestBody ClientCreateDTO clientCreateDTO) {
         return ResponseEntity.ok(clientService.updateClient(id, clientCreateDTO));
     }
 
