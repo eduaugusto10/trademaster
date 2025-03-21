@@ -32,18 +32,9 @@ public class ClientServiceImpl implements ClientService {
 
     public ClientResponseDTO saveClient(ClientCreateDTO clientDTO) {
         log.info("Criando cliente: {}", clientDTO);
-        if (Objects.isNull(clientDTO.getCpf())) {
-            throw new ResourceBadRequestException("Parâmetro CPF é obrigatório");
-        }
+        validatedCPF(clientDTO);
 
-        clientRepository.findByCpf(clientDTO.getCpf())
-                .ifPresent(c -> {
-                    throw new ResourceBadRequestException("CPF: " + clientDTO.getCpf() + " cadastrado");
-                });
-
-        Client client = clientMapper.toEntity(clientDTO);
-
-        Client savedClient = clientRepository.save(client);
+        Client savedClient = clientRepository.save(clientMapper.toEntity(clientDTO));
         log.info("Cliente criado: {}", savedClient);
         return clientMapper.toResponseDTO(savedClient);
     }
@@ -77,14 +68,7 @@ public class ClientServiceImpl implements ClientService {
         existingClient.setCpf(clientCreateDTO.getCpf());
         existingClient.setPhone(clientCreateDTO.getPhone());
 
-        List<Card> updatedCards = new ArrayList<>();
-
-
-        try {
-            clientRepository.save(existingClient);
-        } catch (Exception e) {
-            log.error("Erro ao salvar cliente", e);
-        }
+        clientRepository.save(existingClient);
 
         return clientMapper.toResponseDTO(existingClient);
     }
@@ -94,7 +78,8 @@ public class ClientServiceImpl implements ClientService {
         clientRepository.deleteById(id);
     }
 
-    private void updateCards(ClientCreateDTO clientCreateDTO, Client existingClient, List<Card> updatedCards) {
+    private void updateCards(ClientCreateDTO clientCreateDTO, Client existingClient) {
+        List<Card> updatedCards = new ArrayList<>();
         for (CardCreateDTO cardCreateDTO : clientCreateDTO.getCards()) {
             Card card = cardRepository.findByCardNumber(cardCreateDTO.getCardNumber())
                     .orElse(new Card());
@@ -107,5 +92,16 @@ public class ClientServiceImpl implements ClientService {
             cardRepository.save(card);
         }
         existingClient.setCards(updatedCards);
+    }
+
+    private void validatedCPF(ClientCreateDTO clientDTO) {
+        if (Objects.isNull(clientDTO.getCpf())) {
+            throw new ResourceBadRequestException("Parâmetro CPF é obrigatório");
+        }
+
+        clientRepository.findByCpf(clientDTO.getCpf())
+                .ifPresent(c -> {
+                    throw new ResourceBadRequestException("CPF: " + clientDTO.getCpf() + " cadastrado");
+                });
     }
 }
