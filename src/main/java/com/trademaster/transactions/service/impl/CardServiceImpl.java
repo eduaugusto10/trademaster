@@ -32,20 +32,18 @@ public class CardServiceImpl implements CardService {
     @Override
     @Transactional
     public CardResponseDTO saveCard(CardCreateDTO cardDto) {
-        log.info("Criando cartão: {}",cardDto);
+        log.info("Criando cartão: {}", cardDto);
         Client client = clientRepository.findById(cardDto.getClientId())
                 .orElseThrow(() -> new ResourceNotFoundException("Cliente não encontrado"));
 
-        Card card = cardMapper.toEntity(cardDto);
-
-        Card savedCard = cardRepository.save(card);
-        log.info("Cartão criado: {}",savedCard);
+        Card savedCard = cardRepository.save(cardMapper.toEntity(cardDto));
+        log.info("Cartão criado: {}", savedCard);
         return cardMapper.toResponseDTO(savedCard);
     }
 
     @Override
     public Optional<CardResponseDTO> findCardById(Long id) {
-        log.info("Buscando cartão: {}",id);
+        log.info("Buscando cartão: {}", id);
         return cardRepository.findById(id)
                 .map(cardMapper::toResponseDTO);
     }
@@ -53,7 +51,7 @@ public class CardServiceImpl implements CardService {
 
     @Override
     public Optional<Card> findCardEntityById(Long id) {
-        log.info("Buscando cartão: {}",id);
+        log.info("Buscando cartão: {}", id);
         return cardRepository.findById(id);
     }
 
@@ -64,7 +62,7 @@ public class CardServiceImpl implements CardService {
         Card existingCard = cardRepository.findById(cardDTO.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Cartão não encontrado"));
 
-        Client client = clientRepository.findById(cardDTO.getClientId())
+        clientRepository.findById(cardDTO.getClientId())
                 .orElseThrow(() -> new ResourceNotFoundException("Cliente não encontrado"));
 
         existingCard.setCardNumber(cardDTO.getCardNumber());
@@ -79,16 +77,18 @@ public class CardServiceImpl implements CardService {
     @Transactional
     public CardResponseDTO debitBalance(Long id, BigDecimal value) {
         log.info("Atualizando saldo cliente: {} valor: {}", id, value);
+        Card updatedCard = updateDebit(id, value);
+        log.info("Valor debitado: {}, saldo restante: {}", value, updatedCard.getBalance());
+        return cardMapper.toResponseDTO(updatedCard);
+    }
+
+    private Card updateDebit(Long id, BigDecimal value) {
         int updatedRows = cardRepository.debitCardBalance(id, value);
 
         if (updatedRows == 0) {
             throw new ResourceBadRequestException("Saldo insuficiente para débito");
         }
-
-        Card updatedCard = cardRepository.findById(id)
+        return cardRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Cartão não encontrado"));
-
-        log.info("Valor debitado: {}, saldo restante: {}", value, updatedCard.getBalance());
-        return cardMapper.toResponseDTO(updatedCard);
     }
 }

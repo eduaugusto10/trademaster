@@ -70,52 +70,42 @@ public class ClientServiceImpl implements ClientService {
     }
 
     public ClientResponseDTO updateClient(Long id, ClientCreateDTO clientCreateDTO) {
-        // Verifique se o cliente existe
         Client existingClient = clientRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Cliente não encontrado"));
 
-        // Atualize os dados do cliente
         existingClient.setName(clientCreateDTO.getName());
         existingClient.setCpf(clientCreateDTO.getCpf());
         existingClient.setPhone(clientCreateDTO.getPhone());
 
-        // Crie uma nova lista de cartões para o cliente
         List<Card> updatedCards = new ArrayList<>();
 
-        // Atualize ou crie novos cartões
-        for (CardCreateDTO cardCreateDTO : clientCreateDTO.getCards()) {
-            // Procura um cartão existente com o número do cartão, se não existir, cria um novo
-            Card card = cardRepository.findByCardNumber(cardCreateDTO.getCardNumber())
-                    .orElse(new Card()); // Se não encontrar, cria um novo cartão
 
-            // Atualize os campos do cartão
-            card.setCardNumber(cardCreateDTO.getCardNumber());
-            card.setType(cardCreateDTO.getType());
-            card.setBalance(cardCreateDTO.getBalance());
-
-            // Adicione o cartão à lista de cartões atualizada
-            updatedCards.add(card);
-
-            // Salve o cartão no banco de dados
-            cardRepository.save(card);
-        }
-
-        // Agora, associe os cartões ao cliente sem a necessidade de setClient
-        existingClient.setCards(updatedCards);
-
-        // Salve o cliente atualizado
         try {
             clientRepository.save(existingClient);
-        }catch (Exception e){
+        } catch (Exception e) {
             log.error("Erro ao salvar cliente", e);
         }
 
-        // Retorne o cliente atualizado
-        return clientMapper.toResponseDTO(existingClient); // Ou retorne o cliente conforme sua necessidade
+        return clientMapper.toResponseDTO(existingClient);
     }
 
     public void deleteClient(Long id) {
         log.info("Deletando cliente: {}", id);
         clientRepository.deleteById(id);
+    }
+
+    private void updateCards(ClientCreateDTO clientCreateDTO, Client existingClient, List<Card> updatedCards) {
+        for (CardCreateDTO cardCreateDTO : clientCreateDTO.getCards()) {
+            Card card = cardRepository.findByCardNumber(cardCreateDTO.getCardNumber())
+                    .orElse(new Card());
+            card.setCardNumber(cardCreateDTO.getCardNumber());
+            card.setType(cardCreateDTO.getType());
+            card.setBalance(cardCreateDTO.getBalance());
+
+            updatedCards.add(card);
+
+            cardRepository.save(card);
+        }
+        existingClient.setCards(updatedCards);
     }
 }
